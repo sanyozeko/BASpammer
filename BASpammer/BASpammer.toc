@@ -1,0 +1,9 @@
+## Interface: 30300
+## Title: BASpammer
+## Author: Bigalex + irlyhatemyselfandyou
+## Version: 1.22
+## Notes: Спамит в выбранный канал заданный текст с заданным интервалом.
+## SavedVariablesPerCharacter: BASpammerDB
+
+BASpammer.xml
+BASpammer.lua

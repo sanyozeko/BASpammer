@@ -1,0 +1,14 @@
+# Рабочие превью и черновики, которые аддон не использует
+BASpammer/Textures/_*.png
+BASpammer/Textures/sheet.png
+
+# Текстуры от отката́нной попытки с рисованными рамками (аддон их не грузит)
+BASpammer/Textures/frame-*.tga
+BASpammer/Textures/button-classic*.tga
+BASpammer/Textures/button-icecrown*.tga
+BASpammer/Textures/corner-classic.tga
+BASpammer/Textures/crest-icecrown.tga
+
+# Архивы
+*.rar
+*.zip

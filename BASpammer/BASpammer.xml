@@ -1,0 +1,953 @@
+﻿<Ui xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\..\FrameXML\UI.xsd" xmlns="http://www.blizzard.com/wow/ui/">
+
+	<Frame name="BASpammerSettingBackgroundTemplate" virtual="true">
+		<Backdrop bgFile="Interface\Tooltips\UI-Tooltip-Background" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+			<EdgeSize>
+				<AbsValue val="16"/>
+			</EdgeSize>
+			<TileSize>
+				<AbsValue val="16"/>
+			</TileSize>
+			<BackgroundInsets>
+				<AbsInset left="5" right="5" top="5" bottom="5"/>
+			</BackgroundInsets>
+		</Backdrop>
+		<Scripts>
+			<OnLoad>
+				self:SetBackdropBorderColor(TOOLTIP_DEFAULT_COLOR.r, TOOLTIP_DEFAULT_COLOR.g, TOOLTIP_DEFAULT_COLOR.b);
+				self:SetBackdropColor(TOOLTIP_DEFAULT_BACKGROUND_COLOR.r, TOOLTIP_DEFAULT_BACKGROUND_COLOR.g, TOOLTIP_DEFAULT_BACKGROUND_COLOR.b);
+			</OnLoad>
+		</Scripts>
+	</Frame>
+	<Frame name="BASpammerDriver" parent="UIParent" hidden="false">
+		<Size>
+			<AbsDimension x="1" y="1"/>
+		</Size>
+		<Anchors>
+			<Anchor point="CENTER"/>
+		</Anchors>
+		<Scripts>
+			<OnUpdate>
+				BASpammer:OnUpdate()
+			</OnUpdate>
+		</Scripts>
+	</Frame>
+	<Frame name="BASpammer" toplevel="true" enableMouse="true" movable="true" parent="UIParent" hidden="false">
+		<Size>
+			<AbsDimension x="150" y="20"/>
+		</Size>
+		<Anchors>
+			<Anchor point="CENTER" relativeTo="UIParent">
+				<Offset>
+					<AbsDimension x="0" y="0" />
+				</Offset>
+			</Anchor>
+ 		</Anchors>
+		<Layers>
+			<Layer>
+				<FontString name="BASpammerText"  inherits="GameFontHighlight" text="BASpammer Off">
+					<Size x="140" y="16"/>
+					<Anchors>
+						<Anchor point="TOP">
+							<Offset>
+								<AbsDimension x="0" y="-1" />
+							</Offset>
+						</Anchor>
+					</Anchors>
+					<FontString inherits="GameFontHighlight"/>
+				</FontString>
+			</Layer>
+		</Layers>
+		<Scripts>
+			<OnMouseUp>
+				if ( self.isMoving ) then
+				  self:StopMovingOrSizing();
+				  self.isMoving = false;
+				  BASpammer:SavePosition(1)
+				end
+			</OnMouseUp>
+			<OnMouseDown>
+				if ( ( ( not self.isLocked ) or ( self.isLocked == 0 ) ) and ( arg1 == "LeftButton" ) ) then
+				  self:StartMoving();
+				  self.isMoving = true;
+				end
+				BASpammer:OnMouseDown(self,arg1)
+			</OnMouseDown>
+			<OnEnter>
+				BASpammer:OnEnter()
+			</OnEnter>
+			<OnLeave>
+				BASpammer:OnLeave()
+			</OnLeave>
+		</Scripts>
+	</Frame>
+	<Button name="BASpammerIcon" toplevel="true" enableMouse="true" movable="true" parent="UIParent" hidden="true">
+		<Size>
+			<AbsDimension x="32" y="32"/>
+		</Size>
+		<Anchors>
+			<Anchor point="CENTER" relativeTo="UIParent">
+				<Offset>
+					<AbsDimension x="0" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+		<Scripts>
+			<OnMouseDown>
+				BASpammerLauncher_OnMouseDown(self)
+			</OnMouseDown>
+			<OnMouseUp>
+				BASpammerLauncher_OnMouseUp(self)
+			</OnMouseUp>
+			<OnEnter>
+				BASpammerLauncher_OnEnter(self)
+			</OnEnter>
+			<OnLeave>
+				BASpammerTooltip:Hide()
+			</OnLeave>
+		</Scripts>
+		<NormalTexture name="$parentNormalTexture" file="Interface\AddOns\BASpammer\Textures\logo-off"/>
+		<HighlightTexture name="$parentHighlightTexture" file="Interface\AddOns\BASpammer\Textures\hl-square" alphaMode="ADD"/>
+	</Button>
+	<Button name="BASpammerMinimapButton" enableMouse="true" movable="true" parent="Minimap" hidden="true">
+		<Size>
+			<AbsDimension x="31" y="31"/>
+		</Size>
+		<Anchors>
+			<Anchor point="CENTER" relativeTo="Minimap" relativePoint="CENTER">
+				<Offset>
+					<AbsDimension x="0" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+		<Layers>
+			<Layer level="BACKGROUND">
+				<Texture name="$parentIcon" file="Interface\AddOns\BASpammer\Textures\logo-round-off">
+					<Size>
+						<AbsDimension x="19" y="19"/>
+					</Size>
+					<Anchors>
+						<Anchor point="CENTER"/>
+					</Anchors>
+				</Texture>
+			</Layer>
+			<Layer level="OVERLAY">
+				<Texture name="$parentBorder" file="Interface\Minimap\MiniMap-TrackingBorder">
+					<Size>
+						<AbsDimension x="53" y="53"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="0" y="0"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</Texture>
+			</Layer>
+		</Layers>
+		<Scripts>
+			<OnMouseDown>
+				BASpammerLauncher_OnMouseDown(self)
+			</OnMouseDown>
+			<OnMouseUp>
+				BASpammerLauncher_OnMouseUp(self)
+			</OnMouseUp>
+			<OnUpdate>
+				BASpammerMinimapButton_OnUpdate(self)
+			</OnUpdate>
+			<OnEnter>
+				BASpammerLauncher_OnEnter(self)
+			</OnEnter>
+			<OnLeave>
+				BASpammerTooltip:Hide()
+			</OnLeave>
+		</Scripts>
+	</Button>
+	<Frame name="BASpammerSetting" toplevel="true" enableMouse="true" movable="true" parent="UIParent" hidden="true" inherits="BASpammerSettingBackgroundTemplate">
+		<Size>
+			<AbsDimension x="430" y="264"/>
+		</Size>
+		<Anchors>
+ 			<Anchor point="CENTER">
+ 				<Offset>
+ 					<AbsDimension x="0" y="0"/>
+ 				</Offset>
+ 			</Anchor>
+ 		</Anchors>
+		<Layers>
+			<Layer>
+				<FontString name="BASpammerSettingTitleText1" inherits="GameFontHighlightLarge" text="BASpammer">
+					<Size>
+						<AbsDimension x="300" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOP" relativeTo="BASpammerSetting" relativePoint="TOP">
+							<Offset>
+								<AbsDimension x="0" y="-10"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="BASpammerSettingTitleText21" inherits="GameFontNormal" text="Канал" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="195" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT" relativeTo="BASpammerSetting" relativePoint="TOPLEFT">
+							<Offset>
+								<AbsDimension x="15" y="-34"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="BASpammerSettingTitleText22" inherits="GameFontNormal" text="Шаблон" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="190" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT" relativeTo="BASpammerSetting" relativePoint="TOPLEFT">
+							<Offset>
+								<AbsDimension x="225" y="-34"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="BASpammerSettingTitleText31" inherits="GameFontNormal" text="Текст" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="100" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT" relativeTo="BASpammerSetting" relativePoint="TOPLEFT">
+							<Offset>
+								<AbsDimension x="15" y="-84"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="BASpammerSettingTitleText32" inherits="GameFontNormal" text="Интервал" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="68" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT" relativeTo="BASpammerSetting" relativePoint="TOPLEFT">
+							<Offset>
+								<AbsDimension x="225" y="-84"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="BASpammerSettingIntervalSuffix" inherits="GameFontDisable" text="сек" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="40" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT" relativeTo="BASpammerSetting" relativePoint="TOPLEFT">
+							<Offset>
+								<AbsDimension x="359" y="-84"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+			</Layer>
+		</Layers>
+		<Frames>
+			<Button name="BASpammerSettingCloseButton">
+				<Size>
+					<AbsDimension x="24" y="24"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPRIGHT" relativeTo="BASpammerSetting" relativePoint="TOPRIGHT">
+						<Offset>
+							<AbsDimension x="-10" y="-10"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						HideUIPanel(BASpammerSetting);
+					</OnClick>
+				</Scripts>
+				<NormalTexture name="$parentNormalTexture" file="Interface\AddOns\BASpammer\Textures\close-up"/>
+				<PushedTexture name="$parentPushedTexture" file="Interface\AddOns\BASpammer\Textures\close-down"/>
+				<HighlightTexture name="$parentHighlightTexture" file="Interface\AddOns\BASpammer\Textures\hl-square" alphaMode="ADD"/>
+			</Button>
+			<Button name="BASpammerSettingSkinButton">
+				<Size>
+					<AbsDimension x="24" y="24"/>
+				</Size>
+				<Anchors>
+					<Anchor point="CENTER" relativeTo="BASpammerSettingCloseButton" relativePoint="CENTER">
+						<Offset>
+							<AbsDimension x="-28" y="0"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						BASpammerSettingSkinButton_OnClick()
+					</OnClick>
+					<OnEnter>
+						BASpammerSettingSkinButton_OnEnter()
+					</OnEnter>
+					<OnLeave>
+						GameTooltip:Hide()
+					</OnLeave>
+				</Scripts>
+				<NormalTexture name="$parentNormalTexture" file="Interface\AddOns\BASpammer\Textures\gear-up"/>
+				<PushedTexture name="$parentPushedTexture" file="Interface\AddOns\BASpammer\Textures\gear-down"/>
+				<HighlightTexture name="$parentHighlightTexture" file="Interface\AddOns\BASpammer\Textures\hl-square" alphaMode="ADD"/>
+			</Button>
+			<Button name="BASpammerSettingExitButton" text="Свернуть">
+				<Size>
+					<AbsDimension x="79" y="22"/>
+				</Size>
+				<Anchors>
+					<Anchor point="BOTTOMRIGHT" relativeTo="BASpammerSetting" relativePoint="BOTTOMRIGHT">
+						<Offset>
+							<AbsDimension x="-15" y="14"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						HideUIPanel(BASpammerSetting);
+					</OnClick>
+				</Scripts>
+				<PushedTextOffset>
+					<AbsDimension x="1" y="-1"/>
+				</PushedTextOffset>
+				<ButtonText name="$parentText"/>
+				<NormalFont style="GameFontNormal"/>
+				<HighlightFont style="GameFontHighlight"/>
+				<DisabledFont style="GameFontDisable"/>
+				<NormalTexture name="$parentNormalTexture" file="Interface\AddOns\BASpammer\Textures\btn-up"/>
+				<PushedTexture name="$parentPushedTexture" file="Interface\AddOns\BASpammer\Textures\btn-down"/>
+				<HighlightTexture name="$parentHighlightTexture" file="Interface\AddOns\BASpammer\Textures\hl-wide" alphaMode="ADD"/>
+			</Button>
+			<Button name="BASpammerSettingStartButton" text="Старт">
+				<Size>
+					<AbsDimension x="100" y="22"/>
+				</Size>
+				<Anchors>
+					<Anchor point="BOTTOMLEFT" relativeTo="BASpammerSetting" relativePoint="BOTTOMLEFT">
+						<Offset>
+							<AbsDimension x="15" y="14"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						BASpammerSettingToggleButton_OnClick()
+					</OnClick>
+				</Scripts>
+				<PushedTextOffset>
+					<AbsDimension x="1" y="-1"/>
+				</PushedTextOffset>
+				<ButtonText name="$parentText"/>
+				<NormalFont style="GameFontNormal"/>
+				<HighlightFont style="GameFontHighlight"/>
+				<DisabledFont style="GameFontDisable"/>
+				<NormalTexture name="$parentNormalTexture" file="Interface\AddOns\BASpammer\Textures\btn-up"/>
+				<PushedTexture name="$parentPushedTexture" file="Interface\AddOns\BASpammer\Textures\btn-down"/>
+				<HighlightTexture name="$parentHighlightTexture" file="Interface\AddOns\BASpammer\Textures\hl-wide" alphaMode="ADD"/>
+			</Button>
+			<Frame name="BASpammerSettingChanel" inherits="BASpammerSettingBackgroundTemplate">
+				<Size>
+					<AbsDimension x="195" y="25"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT" relativeTo="BASpammerSettingTitleText21" relativePoint="BOTTOMLEFT">
+						<Offset>
+							<AbsDimension x="0" y="0"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Layers>
+					<Layer>
+						<FontString name="BASpammerSettingChanelEditBox" inherits="ChatFontNormal" text="Канал" justifyH="LEFT">
+							<Size>
+								<AbsDimension x="165" y="16"/>
+							</Size>
+							<Anchors>
+								<Anchor point="TOPLEFT">
+									<Offset x="6" y="-5" />
+								</Anchor>
+							</Anchors>
+							<FontString inherits="ChatFontNormal"/>
+						</FontString>
+					</Layer>
+				</Layers>
+				<Frames>
+					<Button name="BASpammerSettingChanelButton">
+						<Size>
+							<AbsDimension x="24" y="24"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPRIGHT">
+								<Offset>
+									<AbsDimension x="0" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								BASpammerSettingChanelButton_OnClick();
+								PlaySound("igMainMenuOptionCheckBoxOn");
+							</OnClick>
+						</Scripts>
+						<NormalTexture name="$parentNormalTexture" file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Up">
+							<Size>
+								<AbsDimension x="24" y="24"/>
+							</Size>
+							<Anchors>
+								<Anchor point="RIGHT"/>
+							</Anchors>
+						</NormalTexture>
+						<PushedTexture name="$parentPushedTexture" file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Down">
+							<Size>
+								<AbsDimension x="24" y="24"/>
+							</Size>
+							<Anchors>
+								<Anchor point="RIGHT"/>
+							</Anchors>
+						</PushedTexture>
+						<DisabledTexture name="$parentDisabledTexture" file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Disabled">
+							<Size>
+								<AbsDimension x="24" y="24"/>
+							</Size>
+							<Anchors>
+								<Anchor point="RIGHT"/>
+							</Anchors>
+						</DisabledTexture>
+						<HighlightTexture name="$parentHighlightTexture" file="Interface\Buttons\UI-Common-MouseHilight" alphaMode="ADD">
+							<Size>
+								<AbsDimension x="24" y="24"/>
+							</Size>
+							<Anchors>
+								<Anchor point="RIGHT"/>
+							</Anchors>
+						</HighlightTexture>
+					</Button>
+				</Frames>
+			</Frame>
+			<Frame name="BASpammerSettingTextPattern" inherits="BASpammerSettingBackgroundTemplate" >
+				<Size>
+					<AbsDimension x="190" y="25"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT" relativeTo="BASpammerSettingTitleText22" relativePoint="BOTTOMLEFT">
+						<Offset>
+							<AbsDimension x="0" y="0"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Layers>
+					<Layer>
+						<FontString name="BASpammerSettingTextPatternEditBox" inherits="ChatFontNormal" text="Шаблон" justifyH="LEFT">
+							<Size>
+								<AbsDimension x="160" y="16"/>
+							</Size>
+							<Anchors>
+								<Anchor point="TOPLEFT">
+									<Offset x="6" y="-5" />
+								</Anchor>
+							</Anchors>
+							<FontString inherits="ChatFontNormal"/>
+						</FontString>
+					</Layer>
+				</Layers>
+				<Frames>
+					<Button name="BASpammerSettingTextPatternButton">
+						<Size>
+							<AbsDimension x="24" y="24"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPRIGHT">
+								<Offset>
+									<AbsDimension x="0" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								BASpammerSettingTextPatternButton_OnClick();
+								PlaySound("igMainMenuOptionCheckBoxOn");
+							</OnClick>
+						</Scripts>
+						<NormalTexture name="$parentNormalTexture" file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Up">
+							<Size>
+								<AbsDimension x="24" y="24"/>
+							</Size>
+							<Anchors>
+								<Anchor point="RIGHT"/>
+							</Anchors>
+						</NormalTexture>
+						<PushedTexture name="$parentPushedTexture" file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Down">
+							<Size>
+								<AbsDimension x="24" y="24"/>
+							</Size>
+							<Anchors>
+								<Anchor point="RIGHT"/>
+							</Anchors>
+						</PushedTexture>
+						<DisabledTexture name="$parentDisabledTexture" file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Disabled">
+							<Size>
+								<AbsDimension x="24" y="24"/>
+							</Size>
+							<Anchors>
+								<Anchor point="RIGHT"/>
+							</Anchors>
+						</DisabledTexture>
+						<HighlightTexture name="$parentHighlightTexture" file="Interface\Buttons\UI-Common-MouseHilight" alphaMode="ADD">
+							<Size>
+								<AbsDimension x="24" y="24"/>
+							</Size>
+							<Anchors>
+								<Anchor point="RIGHT"/>
+							</Anchors>
+						</HighlightTexture>
+					</Button>
+				</Frames>
+			</Frame>
+			<Frame name="BASpammerSettingInterval" inherits="BASpammerSettingBackgroundTemplate">
+				<Size>
+					<AbsDimension x="60" y="25"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT" relativeTo="BASpammerSettingTitleText32" relativePoint="TOPRIGHT">
+						<Offset>
+							<AbsDimension x="0" y="5"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Frames>
+					<EditBox name="BASpammerSettingIntervalEditBox" letters="4" autoFocus="false">
+						<Size>
+							<AbsDimension x="48" y="16"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPLEFT">
+								<Offset x="6" y="-5" />
+							</Anchor>
+						</Anchors>
+						<FontString inherits="ChatFontNormal"/>
+						<Scripts>
+							<OnTextChanged>
+								BASpammerSettingIntervalEditBox_OnTextChanged()
+							</OnTextChanged>
+							<OnEnterPressed>
+								BASpammerSettingIntervalEditBox_OnEnterPressed()
+							</OnEnterPressed>
+							<OnEditFocusLost>
+								BASpammerSettingIntervalEditBox_OnEditFocusLost()
+							</OnEditFocusLost>
+						</Scripts>
+					</EditBox>
+				</Frames>
+			</Frame>
+			<Frame name="BASpammerSettingText" inherits="BASpammerSettingBackgroundTemplate">
+				<Size>
+					<AbsDimension x="400" y="100"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT" relativeTo="BASpammerSettingTitleText31" relativePoint="BOTTOMLEFT">
+						<Offset>
+							<AbsDimension x="0" y="-6"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Layers>
+					<Layer>
+						<FontString name="BASpammerSettingTextSymbols"  inherits="GameFontDisableSmall" justifyH="RIGHT">
+							<Size x="150" y="16"/>
+							<Anchors>
+								<Anchor point="TOPRIGHT" relativeTo="BASpammerSettingText" relativePoint="BOTTOMRIGHT">
+									<Offset>
+										<AbsDimension x="-2" y="-2" />
+									</Offset>
+								</Anchor>
+							</Anchors>
+							<FontString inherits="GameFontDisableSmall"/>
+						</FontString>
+					</Layer>
+				</Layers>
+				<Frames>
+					<EditBox name="BASpammerSettingTextBox" letters="255" multiLine="true" autoFocus="false">
+						<Anchors>
+							<Anchor point="TOPLEFT">
+								<Offset>
+									<AbsDimension x="6" y="-6"/>
+								</Offset>
+							</Anchor>
+							<Anchor point="BOTTOM">
+								<Offset>
+									<AbsDimension x="0" y="6"/>
+								</Offset>
+							</Anchor>
+							<Anchor point="RIGHT">
+								<Offset>
+									<AbsDimension x="-6" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<FontString inherits="ChatFontNormal"/>
+						<Scripts>
+							<OnMouseDown>
+								BASpammerSettingTextBox_OnMouseDown(self,arg1)
+							</OnMouseDown>
+							<OnTextChanged>
+								BASpammerSettingTextBox_OnTextChanged()
+							</OnTextChanged>
+							<OnEnterPressed>
+								BASpammerSettingTextBox_OnEnterPressed()
+							</OnEnterPressed>
+							<OnTabPressed>
+								BASpammerSettingTextBox_OnTabPressed()
+							</OnTabPressed>
+							<OnEscapePressed>
+								BASpammerSettingTextBox_OnEscapePressed()
+							</OnEscapePressed>
+							<OnEditFocusGained>
+								BASpammerSettingTextBox_OnEditFocusGained()
+							</OnEditFocusGained>
+							<OnEditFocusLost>
+								BASpammerSettingTextBox_OnEditFocusLost()
+							</OnEditFocusLost>
+						</Scripts>
+					</EditBox>
+					<Button name="BASpammerSettingTextCover">
+						<Anchors>
+							<Anchor point="TOPLEFT">
+								<Offset>
+									<AbsDimension x="5" y="-5"/>
+								</Offset>
+							</Anchor>
+							<Anchor point="BOTTOMRIGHT">
+								<Offset>
+									<AbsDimension x="-5" y="5"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Layers>
+							<Layer level="BACKGROUND">
+								<Texture name="$parentBg" setAllPoints="true">
+									<Color r="0" g="0" b="0" a="0.45"/>
+								</Texture>
+							</Layer>
+							<Layer level="OVERLAY">
+								<FontString name="$parentText" inherits="GameFontNormalSmall" text="Нажмите, чтобы изменить текст">
+									<Anchors>
+										<Anchor point="CENTER"/>
+									</Anchors>
+								</FontString>
+							</Layer>
+						</Layers>
+						<Scripts>
+							<OnLoad>
+								self:RegisterForClicks("LeftButtonUp", "RightButtonUp");
+							</OnLoad>
+							<OnClick>
+								BASpammerSettingTextCover_OnClick(self, arg1)
+							</OnClick>
+						</Scripts>
+					</Button>
+				</Frames>
+			</Frame>
+			<Frame name="BASpammerSettingTaximeter" inherits="BASpammerSettingBackgroundTemplate">
+				<Size>
+					<AbsDimension x="165" y="25"/>
+				</Size>
+				<Anchors>
+					<Anchor point="BOTTOM" relativeTo="BASpammerSetting" relativePoint="BOTTOM">
+						<Offset>
+							<AbsDimension x="0" y="13"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Layers>
+					<Layer>
+						<FontString name="BASpammerSettingTaximeterLabel" inherits="GameFontHighlightSmall" text="|cff40ff40• Идёт спам|r" justifyH="LEFT">
+							<Size x="100" y="16"/>
+							<Anchors>
+								<Anchor point="LEFT">
+									<Offset>
+										<AbsDimension x="10" y="0" />
+									</Offset>
+								</Anchor>
+							</Anchors>
+							<FontString inherits="GameFontHighlightSmall"/>
+						</FontString>
+						<FontString name="BASpammerSettingTaximeterText"  inherits="GameFontGreenLarge" justifyH="RIGHT">
+							<Size x="55" y="16"/>
+							<Anchors>
+								<Anchor point="RIGHT">
+									<Offset>
+										<AbsDimension x="-10" y="0" />
+									</Offset>
+								</Anchor>
+							</Anchors>
+							<FontString inherits="GameFontGreenLarge"/>
+						</FontString>
+					</Layer>
+				</Layers>
+			</Frame>
+		</Frames>
+		<Scripts>
+			<OnHide>
+				if ( self.isMoving ) then
+				  self:StopMovingOrSizing();
+				  self.isMoving = false;
+				  BASpammer:SavePosition(2)
+				end
+			</OnHide>
+			<OnMouseUp>
+				if ( self.isMoving ) then
+				  self:StopMovingOrSizing();
+				  self.isMoving = false;
+				  BASpammer:SavePosition(2)
+				end
+			</OnMouseUp>
+			<OnMouseDown>
+				BASpammerSettingTextBox:ClearFocus();
+				BASpammerSettingIntervalEditBox:ClearFocus();
+				if ( ( ( not self.isLocked ) or ( self.isLocked == 0 ) ) and ( arg1 == "LeftButton" ) ) then
+				  self:StartMoving();
+				  self.isMoving = true;
+				end
+			</OnMouseDown>
+		</Scripts>
+	</Frame>
+	<Frame name="BASpammerOptions" toplevel="true" enableMouse="true" movable="true" parent="UIParent" hidden="true" inherits="BASpammerSettingBackgroundTemplate">
+		<Size>
+			<AbsDimension x="320" y="212"/>
+		</Size>
+		<Anchors>
+			<Anchor point="CENTER">
+				<Offset>
+					<AbsDimension x="0" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+		<Layers>
+			<Layer level="ARTWORK">
+				<FontString name="BASpammerOptionsTitle" inherits="GameFontHighlightLarge" text="Настройки">
+					<Size>
+						<AbsDimension x="240" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOP">
+							<Offset>
+								<AbsDimension x="0" y="-12"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="BASpammerOptionsLauncherLabel" inherits="GameFontNormal" text="Кнопка вызова" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="200" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="18" y="-44"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<Texture name="BASpammerOptionsPreview1" file="Interface\AddOns\BASpammer\Textures\logo-round-off">
+					<Size>
+						<AbsDimension x="26" y="26"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="48" y="-63"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</Texture>
+				<Texture name="BASpammerOptionsPreview2" file="Interface\AddOns\BASpammer\Textures\logo-off">
+					<Size>
+						<AbsDimension x="26" y="26"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="48" y="-97"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</Texture>
+				<FontString name="BASpammerOptionsPreview3" inherits="GameFontHighlightSmall" text="BASpammer |cffff0000Off|r" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="72" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="48" y="-140"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="BASpammerOptionsLabel1" inherits="GameFontHighlight" text="На миникарте" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="180" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="128" y="-68"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="BASpammerOptionsLabel2" inherits="GameFontHighlight" text="Иконка на экране" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="180" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="128" y="-102"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="BASpammerOptionsLabel3" inherits="GameFontHighlight" text="Надпись на экране" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="180" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="128" y="-136"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+			</Layer>
+		</Layers>
+		<Frames>
+			<Button name="BASpammerOptionsCloseButton">
+				<Size>
+					<AbsDimension x="24" y="24"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPRIGHT">
+						<Offset>
+							<AbsDimension x="-10" y="-10"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						HideUIPanel(BASpammerOptions);
+					</OnClick>
+				</Scripts>
+				<NormalTexture name="$parentNormalTexture" file="Interface\AddOns\BASpammer\Textures\close-up"/>
+				<PushedTexture name="$parentPushedTexture" file="Interface\AddOns\BASpammer\Textures\close-down"/>
+				<HighlightTexture name="$parentHighlightTexture" file="Interface\AddOns\BASpammer\Textures\hl-square" alphaMode="ADD"/>
+			</Button>
+			<CheckButton name="BASpammerOptionsLauncher1" inherits="UICheckButtonTemplate">
+				<Size>
+					<AbsDimension x="24" y="24"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT">
+						<Offset>
+							<AbsDimension x="16" y="-64"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						BASpammerOptionsLauncher_OnClick(1)
+					</OnClick>
+				</Scripts>
+			</CheckButton>
+			<CheckButton name="BASpammerOptionsLauncher2" inherits="UICheckButtonTemplate">
+				<Size>
+					<AbsDimension x="24" y="24"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT">
+						<Offset>
+							<AbsDimension x="16" y="-98"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						BASpammerOptionsLauncher_OnClick(2)
+					</OnClick>
+				</Scripts>
+			</CheckButton>
+			<CheckButton name="BASpammerOptionsLauncher3" inherits="UICheckButtonTemplate">
+				<Size>
+					<AbsDimension x="24" y="24"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT">
+						<Offset>
+							<AbsDimension x="16" y="-132"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						BASpammerOptionsLauncher_OnClick(3)
+					</OnClick>
+				</Scripts>
+			</CheckButton>
+			<Button name="BASpammerOptionsDone" text="Закрыть">
+				<Size>
+					<AbsDimension x="90" y="22"/>
+				</Size>
+				<Anchors>
+					<Anchor point="BOTTOM">
+						<Offset>
+							<AbsDimension x="0" y="14"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						HideUIPanel(BASpammerOptions);
+					</OnClick>
+				</Scripts>
+				<PushedTextOffset>
+					<AbsDimension x="1" y="-1"/>
+				</PushedTextOffset>
+				<ButtonText name="$parentText"/>
+				<NormalFont style="GameFontNormal"/>
+				<HighlightFont style="GameFontHighlight"/>
+				<DisabledFont style="GameFontDisable"/>
+				<NormalTexture name="$parentNormalTexture" file="Interface\AddOns\BASpammer\Textures\btn-up"/>
+				<PushedTexture name="$parentPushedTexture" file="Interface\AddOns\BASpammer\Textures\btn-down"/>
+				<HighlightTexture name="$parentHighlightTexture" file="Interface\AddOns\BASpammer\Textures\hl-wide" alphaMode="ADD"/>
+			</Button>
+		</Frames>
+		<Scripts>
+			<OnMouseUp>
+				if ( self.isMoving ) then
+				  self:StopMovingOrSizing();
+				  self.isMoving = false;
+				end
+			</OnMouseUp>
+			<OnMouseDown>
+				if ( arg1 == "LeftButton" ) then
+				  self:StartMoving();
+				  self.isMoving = true;
+				end
+			</OnMouseDown>
+			<OnHide>
+				if ( self.isMoving ) then
+				  self:StopMovingOrSizing();
+				  self.isMoving = false;
+				end
+			</OnHide>
+		</Scripts>
+	</Frame>
+</Ui>
