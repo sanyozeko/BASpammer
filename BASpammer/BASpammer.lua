@@ -16,7 +16,7 @@ BASpammerTooltip = CreateFrame("GameTooltip", "BASpammerTooltip", nil, "GameTool
 
 -- Файл SavedVariables выполняется после файлов аддона и заменяет эту таблицу целиком,
 -- поэтому значения по умолчанию проставляются в BA_InitDB() по ADDON_LOADED.
-BASpammerDB = BASpammerDB or {}
+BASpammerAccountDB = BASpammerAccountDB or {}
 
 local BASpammerRaidIconList = {
 [1] = { text = RAID_TARGET_1, color = {r = 1.0, g = 0.92, b = 0}, icon = "Interface\\TargetingFrame\\UI-RaidTargetingIcons", tCoordLeft = 0, tCoordRight = 0.25, tCoordTop = 0, tCoordBottom = 0.25 };
@@ -81,7 +81,7 @@ end
 
 -- "3. начало текста шаблона..."
 local function BA_PatternLabel(index, maxChars)
-    local db = BASpammerDB
+    local db = BASpammerAccountDB
     local txt = BA_PlainText(db.Pattern and db.Pattern[index])
     if txt == "" then txt = BA_EMPTY_LABEL end
     local cut, trimmed = BA_TrimToChars(txt, maxChars)
@@ -91,7 +91,7 @@ end
 
 -- Номера каналов меняются между сессиями, поэтому канал доищивается по имени.
 local function BA_ResolveChannel()
-    local db = BASpammerDB
+    local db = BASpammerAccountDB
     if db.ChannelName then
         local id = GetChannelName(db.ChannelName)
         if id and id > 0 then db.Channel = id end
@@ -112,9 +112,93 @@ end
 
 -- === Сохранённые настройки ===
 
+-- До 1.23 всё лежало у каждого персонажа отдельно, в BASpammerDB. Теперь общее
+-- хранилище BASpammerAccountDB, а старое осталось объявленным в toc только ради
+-- переноса: аддон в него больше не пишет, файлы персонажей остаются как запасная копия.
+local function BA_CharPatterns()
+    local old = BASpammerDB
+    if type(old) ~= "table" or type(old.Pattern) ~= "table" then return nil end
+    return old
+end
+
+-- Сколько шаблонов этого персонажа ещё не попало в общее хранилище.
+local function BA_PendingImport()
+    local old = BA_CharPatterns()
+    local acc = BASpammerAccountDB
+    if not old or type(acc.Pattern) ~= "table" then return 0 end
+    local pending = 0
+    for i = 1, BA_PATTERN_COUNT do
+        local txt = old.Pattern[i]
+        if type(txt) == "string" and txt ~= "" and txt ~= BA_EMPTY_LABEL then
+            local found = false
+            for j = 1, BA_PATTERN_COUNT do
+                if acc.Pattern[j] == txt then found = true break end
+            end
+            if not found then pending = pending + 1 end
+        end
+    end
+    return pending
+end
+
+-- Первый персонаж, который зашёл после обновления, отдаёт свои настройки в общие.
+local function BA_MigrateFromCharacter()
+    local old = BA_CharPatterns()
+    if not old then return false end
+    if type(BASpammerAccountDB.Pattern) == "table" then return false end
+
+    local acc = BASpammerAccountDB
+    for key, value in pairs(old) do
+        if key ~= "Pattern" then acc[key] = value end
+    end
+    acc.Pattern = {}
+    for i = 1, BA_PATTERN_COUNT do
+        acc.Pattern[i] = type(old.Pattern[i]) == "string" and old.Pattern[i] or ""
+    end
+    return true
+end
+
+local function BA_ImportCharacterPatterns()
+    local old = BA_CharPatterns()
+    if not old then
+        BA_Print("у этого персонажа нет старых шаблонов.")
+        return
+    end
+    local acc = BASpammerAccountDB
+    local added, full = 0, false
+    for i = 1, BA_PATTERN_COUNT do
+        local txt = old.Pattern[i]
+        if type(txt) == "string" and txt ~= "" and txt ~= BA_EMPTY_LABEL then
+            local exists = false
+            for j = 1, BA_PATTERN_COUNT do
+                if acc.Pattern[j] == txt then exists = true break end
+            end
+            if not exists then
+                local slot
+                for j = 1, BA_PATTERN_COUNT do
+                    if acc.Pattern[j] == "" then slot = j break end
+                end
+                if slot then
+                    acc.Pattern[slot] = txt
+                    added = added + 1
+                else
+                    full = true
+                end
+            end
+        end
+    end
+    if added > 0 then
+        BA_Print("перенесено шаблонов: " .. added .. ".")
+    else
+        BA_Print("переносить нечего, все шаблоны этого персонажа уже есть в общих.")
+    end
+    if full then
+        BA_Print("|cffff0000часть не влезла - свободных слотов не осталось.|r")
+    end
+end
+
 local function BA_InitDB()
-    if type(BASpammerDB) ~= "table" then BASpammerDB = {} end
-    local db = BASpammerDB
+    if type(BASpammerAccountDB) ~= "table" then BASpammerAccountDB = {} end
+    local db = BASpammerAccountDB
 
     if type(db.Pattern) ~= "table" then db.Pattern = {} end
     for i = 1, BA_PATTERN_COUNT do
@@ -163,7 +247,7 @@ local BA_MINIMAP_RADIUS = 80
 -- Значок меняет цвет вместе с состоянием: красный без полосок - молчит,
 -- зелёный с полосками - идёт спам.
 local function BA_SetToggleText()
-    local on = BASpammerDB.Tumbler
+    local on = BASpammerAccountDB.Tumbler
     if on then
         BASpammerText:SetText("BASpammer |cff00ff00On|r")
     else
@@ -178,7 +262,7 @@ local function BA_SetToggleText()
 end
 
 local function BA_PlaceMinimapButton()
-    local angle = math.rad(BASpammerDB.MinimapAngle or 200)
+    local angle = math.rad(BASpammerAccountDB.MinimapAngle or 200)
     BASpammerMinimapButton:ClearAllPoints()
     BASpammerMinimapButton:SetPoint("CENTER", Minimap, "CENTER",
         math.cos(angle) * BA_MINIMAP_RADIUS, math.sin(angle) * BA_MINIMAP_RADIUS)
@@ -187,7 +271,7 @@ end
 -- Показывается ровно одна кнопка, остальные прячутся. Таймер живёт на отдельной
 -- рамке BASpammerDriver, поэтому спам не зависит от того, что видно на экране.
 local function BA_ApplyLauncher()
-    local mode = BASpammerDB.Launcher
+    local mode = BASpammerAccountDB.Launcher
     BASpammerMinimapButton:Hide()
     BASpammerIcon:Hide()
     BASpammer:Hide()
@@ -203,7 +287,7 @@ local function BA_ApplyLauncher()
 end
 
 local function BA_RefreshOptions()
-    local mode = BASpammerDB.Launcher
+    local mode = BASpammerAccountDB.Launcher
     BASpammerOptionsLauncher1:SetChecked(mode == 1)
     BASpammerOptionsLauncher2:SetChecked(mode == 2)
     BASpammerOptionsLauncher3:SetChecked(mode == 3)
@@ -211,7 +295,7 @@ end
 
 -- Подсказка одна на все три кнопки вызова, привязывается к той, на которую навели.
 local function BA_ShowTooltip(owner)
-    local db = BASpammerDB
+    local db = BASpammerAccountDB
     GameTooltip_SetDefaultAnchor(BASpammerTooltip, owner)
     BASpammerTooltip:ClearLines()
     BASpammerTooltip:SetHyperlink("|cff9d9d9d|Hitem::0:0:0:0:0:0:0:0|h[]|h|r")
@@ -232,14 +316,14 @@ end
 
 local function BA_UpdateSymbolText()
     if not BASpammerSettingTextSymbols then return end
-    local db = BASpammerDB
+    local db = BASpammerAccountDB
     local txt = (db and db.Pattern and db.Pattern[db.CheckedPattern]) or ""
     BASpammerSettingTextSymbols:SetFormattedText("%d / %d", #txt, BA_MAX_BYTES)
 end
 
 -- Без цветовых кодов: кнопка красит текст сама, стандартным золотым.
 local function BA_SetToggleButton()
-    if BASpammerDB.Tumbler then
+    if BASpammerAccountDB.Tumbler then
         BASpammerSettingStartButton:SetText("Стоп")
     else
         BASpammerSettingStartButton:SetText("Старт")
@@ -275,11 +359,11 @@ local function BA_CheckOutsideClick()
 end
 
 local function BA_UpdatePatternLabel()
-    BASpammerSettingTextPatternEditBox:SetText(BA_PatternLabel(BASpammerDB.CheckedPattern, BA_PREVIEW_FIELD))
+    BASpammerSettingTextPatternEditBox:SetText(BA_PatternLabel(BASpammerAccountDB.CheckedPattern, BA_PREVIEW_FIELD))
 end
 
 local function BA_RefreshSettingWidgets()
-    local db = BASpammerDB
+    local db = BASpammerAccountDB
     if not db.Pattern then BA_InitDB() end
     BA_UpdatePatternLabel()
     -- Текст можно править во время спама, поэтому не сбрасываем поле без нужды.
@@ -407,8 +491,8 @@ BASpammerChannelsDropdown.initialize = function(self, level)
             info.notCheckable = 1
             info.func = function(_, arg1)
                 CloseDropDownMenus()
-                BASpammerDB.Channel = arg1
-                BASpammerDB.ChannelName = name
+                BASpammerAccountDB.Channel = arg1
+                BASpammerAccountDB.ChannelName = name
                 BA_channelWarned = false -- канал сменили, предупреждение можно показать снова
                 BASpammerSettingChanelEditBox:SetText(BA_ChannelLabel())
             end
@@ -435,13 +519,13 @@ TextPatternDropdown.initialize = function(self, level)
         info.arg1 = i
         info.notCheckable = 1
         info.tooltipTitle = "Шаблон " .. i
-        info.tooltipText = BASpammerDB.Pattern and BASpammerDB.Pattern[i]
+        info.tooltipText = BASpammerAccountDB.Pattern and BASpammerAccountDB.Pattern[i]
         info.tooltipOnButton = 1
         info.func = function(_, arg1)
             CloseDropDownMenus()
             -- Номер меняем до SetText, иначе OnTextChanged запишет текст в старый шаблон.
-            BASpammerDB.CheckedPattern = arg1
-            BASpammerSettingTextBox:SetText(BASpammerDB.Pattern[arg1])
+            BASpammerAccountDB.CheckedPattern = arg1
+            BASpammerSettingTextBox:SetText(BASpammerAccountDB.Pattern[arg1])
             BA_blankWarned = false
             BA_UpdatePatternLabel()
         end
@@ -506,7 +590,7 @@ function BASpammerLauncher_OnMouseUp(self)
         if x and y and self.startX and self.startY then
             if math.abs(x - self.startX) > 2 or math.abs(y - self.startY) > 2 then
                 self.moved = true
-                BASpammerDB.IconX, BASpammerDB.IconY = x, y
+                BASpammerAccountDB.IconX, BASpammerAccountDB.IconY = x, y
             end
         end
     end
@@ -523,8 +607,8 @@ function BASpammerMinimapButton_OnUpdate(self)
     local cx, cy = GetCursorPosition()
     cx, cy = cx / scale, cy / scale
     local angle = math.deg(math.atan2(cy - my, cx - mx))
-    if math.abs(angle - (BASpammerDB.MinimapAngle or 200)) > 0.5 then self.moved = true end
-    BASpammerDB.MinimapAngle = angle
+    if math.abs(angle - (BASpammerAccountDB.MinimapAngle or 200)) > 0.5 then self.moved = true end
+    BASpammerAccountDB.MinimapAngle = angle
     BA_PlaceMinimapButton()
 end
 
@@ -544,8 +628,8 @@ function BASpammerSettingSkinButton_OnClick()
 end
 
 function BASpammerOptionsLauncher_OnClick(mode)
-    BASpammerDB.Launcher = mode
-    BASpammerDB.LauncherSet = true
+    BASpammerAccountDB.Launcher = mode
+    BASpammerAccountDB.LauncherSet = true
     BA_ApplyLauncher()
     BA_RefreshOptions()
 end
@@ -623,7 +707,7 @@ local function BA_NextInterval(base)
 end
 
 local function BA_SendPattern()
-    local db = BASpammerDB
+    local db = BASpammerAccountDB
     -- Текст читается в момент отправки, поэтому правки применяются со следующего сообщения.
     local msg = db.Pattern and db.Pattern[db.CheckedPattern]
     if BA_IsBlank(msg) then
@@ -651,7 +735,7 @@ end
 function BASpammer:OnUpdate()
     BA_CheckOutsideClick()
 
-    local db = BASpammerDB
+    local db = BASpammerAccountDB
     if not db or not db.Tumbler then return end
 
     local now = GetTime()
@@ -694,7 +778,7 @@ local function BA_RestoreBackgroundFPS()
 end
 
 function BASpammerSettingStartButton_OnClick()
-    local db = BASpammerDB
+    local db = BASpammerAccountDB
     if BA_IsBlank(db.Pattern and db.Pattern[db.CheckedPattern]) then
         BA_Print("|cffff0000Шаблон " .. tostring(db.CheckedPattern) .. " пуст, спам не запущен.|r")
         return
@@ -722,7 +806,7 @@ function BASpammerSettingStartButton_OnClick()
 end
 
 function BASpammerSettingStopButton_OnClick()
-    BASpammerDB.Tumbler = false
+    BASpammerAccountDB.Tumbler = false
     BA_SetToggleText()
     BA_SetToggleButton()
 
@@ -733,7 +817,7 @@ end
 
 function BASpammerSettingToggleButton_OnClick()
     BA_ClearEditFocus()
-    if BASpammerDB.Tumbler then
+    if BASpammerAccountDB.Tumbler then
         BASpammerSettingStopButton_OnClick()
     else
         BASpammerSettingStartButton_OnClick()
@@ -744,7 +828,7 @@ end
 
 function BASpammerSettingTextBox_OnTextChanged()
     if BA_guardText then return end
-    local db = BASpammerDB
+    local db = BASpammerAccountDB
     if not db.Pattern then return end
 
     local txt = BASpammerSettingTextBox:GetText() or ""
@@ -781,13 +865,13 @@ function BASpammerSettingIntervalEditBox_OnTextChanged()
         BASpammerSettingIntervalEditBox:SetText(digits)
         BA_guardInterval = false
     end
-    BASpammerDB.Interval = tonumber(digits) or 0
+    BASpammerAccountDB.Interval = tonumber(digits) or 0
     BA_intervalNext = nil
 end
 
 -- Подтягиваем поле к минимуму, когда пользователь закончил ввод.
 function BASpammerSettingIntervalEditBox_OnEditFocusLost()
-    local db = BASpammerDB
+    local db = BASpammerAccountDB
     if (tonumber(db.Interval) or 0) < BA_MIN_INTERVAL then
         db.Interval = BA_MIN_INTERVAL
         BA_guardInterval = true
@@ -808,20 +892,20 @@ function BASpammer:SavePosition(argpos)
     local left, top = frame:GetLeft(), frame:GetTop()
     if not (left and top) then return end
     if argpos == 1 then
-        BASpammerDB.posx, BASpammerDB.posy = left, top
+        BASpammerAccountDB.posx, BASpammerAccountDB.posy = left, top
     else
-        BASpammerDB.posx1, BASpammerDB.posy1 = left, top
+        BASpammerAccountDB.posx1, BASpammerAccountDB.posy1 = left, top
     end
 end
 
 local function BA_SetupFrames()
-    if BASpammerDB.posx and BASpammerDB.posy then
+    if BASpammerAccountDB.posx and BASpammerAccountDB.posy then
         BASpammer:ClearAllPoints()
-        BASpammer:SetPoint("TOPLEFT", "UIParent", "BOTTOMLEFT", BASpammerDB.posx, BASpammerDB.posy)
+        BASpammer:SetPoint("TOPLEFT", "UIParent", "BOTTOMLEFT", BASpammerAccountDB.posx, BASpammerAccountDB.posy)
     end
-    if BASpammerDB.posx1 and BASpammerDB.posy1 then
+    if BASpammerAccountDB.posx1 and BASpammerAccountDB.posy1 then
         BASpammerSetting:ClearAllPoints()
-        BASpammerSetting:SetPoint("TOPLEFT", "UIParent", "BOTTOMLEFT", BASpammerDB.posx1, BASpammerDB.posy1)
+        BASpammerSetting:SetPoint("TOPLEFT", "UIParent", "BOTTOMLEFT", BASpammerAccountDB.posx1, BASpammerAccountDB.posy1)
     end
     BASpammerSettingTaximeter:Hide()
     -- Панель должна перекрывать поле ввода, иначе клик уйдёт мимо неё.
@@ -830,9 +914,9 @@ local function BA_SetupFrames()
     BA_SetToggleButton()
     BASpammerSettingTitleText1:SetText("BASpammer v" .. (GetAddOnMetadata("BASpammer", "Version") or ""))
 
-    if BASpammerDB.IconX and BASpammerDB.IconY then
+    if BASpammerAccountDB.IconX and BASpammerAccountDB.IconY then
         BASpammerIcon:ClearAllPoints()
-        BASpammerIcon:SetPoint("TOPLEFT", "UIParent", "BOTTOMLEFT", BASpammerDB.IconX, BASpammerDB.IconY)
+        BASpammerIcon:SetPoint("TOPLEFT", "UIParent", "BOTTOMLEFT", BASpammerAccountDB.IconX, BASpammerAccountDB.IconY)
     end
     BA_ApplyLauncher()
     BA_RefreshOptions()
@@ -853,11 +937,21 @@ end
 local function BA_OnEvent(self, event, arg1)
     if event == "ADDON_LOADED" then
         if arg1 == "BASpammer" then
+            local migrated = BA_MigrateFromCharacter()
             BA_InitDB()
             BA_SetupFrames()
             BA_SetToggleText()
             BA_UpdateSymbolText()
             BA_Print("аддон загружен, /baspammer - настройки.")
+            if migrated then
+                BA_Print("шаблоны этого персонажа перенесены в общие для всего аккаунта.")
+            else
+                local pending = BA_PendingImport()
+                if pending > 0 then
+                    BA_Print("у этого персонажа есть " .. pending ..
+                        " старых шаблонов не из общих. |cffffff00/bas import|r перенесёт их в свободные слоты.")
+                end
+            end
         elseif arg1 == "Blizzard_AchievementUI" then
             BA_HookAchievementUI()
         end
@@ -879,7 +973,12 @@ BASpammer:RegisterEvent("PLAYER_LOGOUT")
 
 SLASH_BASPAMMER1 = "/baspammer"
 SLASH_BASPAMMER2 = "/bas"
-SlashCmdList["BASPAMMER"] = function()
+SlashCmdList["BASPAMMER"] = function(msg)
+    if string.match(string.lower(msg or ""), "^%s*import%s*$") then
+        BA_ImportCharacterPatterns()
+        BA_RefreshSettingWidgets()
+        return
+    end
     BA_ToggleSettings()
 end
 
@@ -950,3 +1049,7 @@ end
 --- В настройках рядом с каждым вариантом видно, как кнопка выглядит
 --- Подписи вариантов сделаны отдельными строками: атрибут text у чекбокса не работает
 --- По умолчанию снова надпись, а не миникарта
+-- Версия 1.23
+--- Шаблоны и настройки теперь общие на весь аккаунт, а не у каждого персонажа
+--- Настройки первого зашедшего персонажа переносятся в общие автоматически
+--- /bas import добавляет старые шаблоны персонажа в свободные общие слоты
