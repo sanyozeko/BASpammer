@@ -720,7 +720,7 @@
 	</Frame>
 	<Frame name="BASpammerOptions" toplevel="true" enableMouse="true" movable="true" parent="UIParent" hidden="true" inherits="BASpammerSettingBackgroundTemplate">
 		<Size>
-			<AbsDimension x="320" y="212"/>
+			<AbsDimension x="320" y="276"/>
 		</Size>
 		<Anchors>
 			<Anchor point="CENTER">
@@ -827,6 +827,55 @@
 						</Anchor>
 					</Anchors>
 				</FontString>
+				<Texture name="BASpammerOptionsDivider" file="Interface\Buttons\WHITE8X8">
+					<Size>
+						<AbsDimension x="284" y="1"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="18" y="-158"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+					<Color r="0.48" g="0.13" b="0.13" a="0.8"/>
+				</Texture>
+				<FontString name="BASpammerOptionsRosterLabel" inherits="GameFontNormal" text="Полный состав" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="200" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="18" y="-170"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="BASpammerOptionsRosterWatchLabel" inherits="GameFontHighlight" text="Спросить, когда состав собран" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="250" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="48" y="-194"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="BASpammerOptionsRosterHint" inherits="GameFontDisableSmall" text="Размер берётся из сложности рейда" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="284" y="14"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="18" y="-218"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
 			</Layer>
 		</Layers>
 		<Frames>
@@ -898,6 +947,23 @@
 				<Scripts>
 					<OnClick>
 						BASpammerOptionsLauncher_OnClick(3)
+					</OnClick>
+				</Scripts>
+			</CheckButton>
+			<CheckButton name="BASpammerOptionsRosterWatch" inherits="UICheckButtonTemplate">
+				<Size>
+					<AbsDimension x="24" y="24"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT">
+						<Offset>
+							<AbsDimension x="16" y="-190"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						BASpammerOptionsRosterWatch_OnClick()
 					</OnClick>
 				</Scripts>
 			</CheckButton>

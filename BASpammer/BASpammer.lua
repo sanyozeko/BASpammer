@@ -222,6 +222,8 @@ local function BA_InitDB()
     if db.Launcher < 1 or db.Launcher > 3 then db.Launcher = 3 end
     db.MinimapAngle = tonumber(db.MinimapAngle) or 200
 
+    if type(db.RosterWatch) ~= "boolean" then db.RosterWatch = true end
+
     db.Tumbler = false
     db.LastTimeSpam = 0
     db.Flag = nil -- поле из версий до 1.05
@@ -236,6 +238,72 @@ local BA_blankWarned = false
 local BA_guardText = false
 local BA_guardInterval = false
 local BA_lastTaximeter = 0
+
+-- === Контроль состава ===
+
+-- Размер рейда берём из настройки сложности: 1 и 3 - десятка (группы 1-2),
+-- 2 и 4 - двадцатьпятка (группы 1-5).
+local BA_DIFFICULTY_GROUPS = { [1] = 2, [2] = 5, [3] = 2, [4] = 5 }
+local BA_ROSTER_SETTLE = 2 -- через сколько секунд тишины читать ростер
+
+local BA_rosterShown = false -- плашку за этот запуск уже показывали
+local BA_rosterCheckAt       -- время отложенной проверки
+
+-- Место занято, только если игрок онлайн и стоит в первых groups подгруппах:
+-- офлайн вернётся неизвестно когда, а группы 6-8 в рейд-инстанс не войдут.
+local function BA_RosterFull(groups)
+    local n = GetNumRaidMembers()
+    if n == 0 then return false end
+
+    local count = {}
+    for i = 1, groups do count[i] = 0 end
+    for i = 1, n do
+        local _, _, subgroup, _, _, _, _, online = GetRaidRosterInfo(i)
+        if online and subgroup and count[subgroup] then
+            count[subgroup] = count[subgroup] + 1
+        end
+    end
+
+    for i = 1, groups do
+        if count[i] < 5 then return false end
+    end
+    return true
+end
+
+StaticPopupDialogs["BASPAMMER_ROSTER_FULL"] = {
+    text = "Состав собран.\nОстановить спам?",
+    button1 = "Остановить",
+    button2 = "Продолжить",
+    OnAccept = function() BASpammerSettingStopButton_OnClick() end,
+    timeout = 0, -- окно ждёт ответа и само не закрывается
+    whileDead = 1,
+    hideOnEscape = 1,
+    showAlert = 1,
+}
+
+-- Плашка показывается не больше раза между Стартом и Стопом, поэтому дребезг
+-- состава - реконнект, замена игрока - её больше не будит.
+local function BA_RosterCheck()
+    BA_rosterCheckAt = nil
+    local db = BASpammerAccountDB
+    if BA_rosterShown or not db.RosterWatch or not db.Tumbler then return end
+
+    local difficulty = GetRaidDifficulty and GetRaidDifficulty() or 0
+    local groups = BA_DIFFICULTY_GROUPS[difficulty]
+    if not groups then return end
+
+    if BA_RosterFull(groups) then
+        BA_rosterShown = true
+        StaticPopup_Show("BASPAMMER_ROSTER_FULL")
+    end
+end
+
+-- На массовом инвайте событие прилетает по одному на игрока, поэтому считаем
+-- не сразу, а когда ростер успокоится.
+local function BA_RosterSchedule()
+    if BA_rosterShown then return end
+    BA_rosterCheckAt = GetTime() + BA_ROSTER_SETTLE
+end
 
 -- === Обновление интерфейса ===
 
@@ -291,6 +359,7 @@ local function BA_RefreshOptions()
     BASpammerOptionsLauncher1:SetChecked(mode == 1)
     BASpammerOptionsLauncher2:SetChecked(mode == 2)
     BASpammerOptionsLauncher3:SetChecked(mode == 3)
+    BASpammerOptionsRosterWatch:SetChecked(BASpammerAccountDB.RosterWatch)
 end
 
 -- Подсказка одна на все три кнопки вызова, привязывается к той, на которую навели.
@@ -330,8 +399,12 @@ local function BA_SetToggleButton()
     end
 end
 
+-- Ссылку вставили программно, а кнопка мыши ещё зажата вне окна.
+local BA_skipOutsideClick = false
+
 -- Поле текста закрыто полупрозрачной панелью, пока в нём не стоит курсор.
 local function BA_ClearEditFocus()
+    BA_skipOutsideClick = false
     if BASpammerSettingTextBox then BASpammerSettingTextBox:ClearFocus() end
     if BASpammerSettingIntervalEditBox then BASpammerSettingIntervalEditBox:ClearFocus() end
 end
@@ -353,7 +426,19 @@ end
 local function BA_CheckOutsideClick()
     if not (BASpammerSetting and BASpammerSetting:IsShown()) then return end
     if not BA_HasEditFocus() then return end
-    if not (IsMouseButtonDown("LeftButton") or IsMouseButtonDown("RightButton")) then return end
+
+    -- Кнопки предметов отдают OnClick на отпускании, поэтому зажатый SHIFT + клик
+    -- вне окна - это ещё не уход из поля, а начало вставки ссылки в текст.
+    if IsShiftKeyDown() then return end
+
+    local down = IsMouseButtonDown("LeftButton") or IsMouseButtonDown("RightButton")
+    -- Кнопка может остаться зажатой и после вставки, если SHIFT уже отпустили.
+    if BA_skipOutsideClick then
+        if not down then BA_skipOutsideClick = false end
+        return
+    end
+
+    if not down then return end
     if BA_MouseInsideUI() then return end
     BA_ClearEditFocus()
 end
@@ -395,9 +480,20 @@ end
 
 -- === Вставка ссылок в поле "Текст:" ===
 
+-- Открытая строка ввода чата забирает ссылку себе: иначе SHIFT + клик при
+-- открытом окне аддона уводил ссылку из чата в шаблон.
+local function BA_ChatEditActive()
+    if ChatEdit_GetActiveWindow then
+        local box = ChatEdit_GetActiveWindow()
+        return box ~= nil and box:IsShown()
+    end
+    return ChatFrame1EditBox ~= nil and ChatFrame1EditBox:IsShown()
+end
+
 -- Вставлять можно только в реально видимое поле, иначе ссылка молча уходила
 -- в спрятанный редактор и подменяла шаблон.
 local function BA_CanInsertIntoBox()
+    if BA_ChatEditActive() then return false end
     return BASpammerSetting and BASpammerSetting:IsShown()
        and BASpammerSettingText and BASpammerSettingText:IsShown()
        and BASpammerSettingTextBox ~= nil
@@ -405,6 +501,7 @@ end
 
 local function BA_InsertLink(link)
     if not link or not BA_CanInsertIntoBox() then return false end
+    BA_skipOutsideClick = true
     BASpammerSettingTextBox:SetFocus()
     BASpammerSettingTextBox:Insert(link)
     return true
@@ -634,6 +731,18 @@ function BASpammerOptionsLauncher_OnClick(mode)
     BA_RefreshOptions()
 end
 
+function BASpammerOptionsRosterWatch_OnClick()
+    local db = BASpammerAccountDB
+    db.RosterWatch = not db.RosterWatch
+    BA_RefreshOptions()
+    if db.RosterWatch then
+        BA_RosterSchedule()
+    else
+        StaticPopup_Hide("BASPAMMER_ROSTER_FULL")
+        BA_rosterCheckAt = nil
+    end
+end
+
 function BASpammerSettingSkinButton_OnEnter()
     GameTooltip:SetOwner(BASpammerSettingSkinButton, "ANCHOR_LEFT")
     GameTooltip:SetText("Настройки")
@@ -739,6 +848,8 @@ function BASpammer:OnUpdate()
     if not db or not db.Tumbler then return end
 
     local now = GetTime()
+    if BA_rosterCheckAt and now >= BA_rosterCheckAt then BA_RosterCheck() end
+
     -- Интервал правится на ходу, поэтому минимум сторожим здесь, а не только в Start.
     local base = tonumber(db.Interval) or BA_MIN_INTERVAL
     if base < BA_MIN_INTERVAL then base = BA_MIN_INTERVAL end
@@ -803,6 +914,10 @@ function BASpammerSettingStartButton_OnClick()
     BASpammerSettingTaximeter:Show()
 
     BA_EnsureBackgroundFPS()
+
+    -- Новый запуск - плашка про собранный состав снова имеет право появиться.
+    BA_rosterShown = false
+    BA_RosterSchedule()
 end
 
 function BASpammerSettingStopButton_OnClick()
@@ -813,6 +928,9 @@ function BASpammerSettingStopButton_OnClick()
     BASpammerSettingTaximeter:Hide()
 
     BA_RestoreBackgroundFPS()
+
+    StaticPopup_Hide("BASPAMMER_ROSTER_FULL")
+    BA_rosterCheckAt = nil
 end
 
 function BASpammerSettingToggleButton_OnClick()
@@ -960,6 +1078,8 @@ local function BA_OnEvent(self, event, arg1)
         BA_SetToggleText()
     elseif event == "PLAYER_LOGIN" then
         if IsAddOnLoaded("Blizzard_AchievementUI") then BA_HookAchievementUI() end
+    elseif event == "RAID_ROSTER_UPDATE" or event == "PARTY_MEMBERS_CHANGED" then
+        BA_RosterSchedule()
     elseif event == "PLAYER_LOGOUT" then
         BA_RestoreBackgroundFPS() -- иначе maxFPSBk остаётся изменённым после выхода
     end
@@ -970,6 +1090,8 @@ BASpammer:RegisterEvent("ADDON_LOADED")
 BASpammer:RegisterEvent("VARIABLES_LOADED")
 BASpammer:RegisterEvent("PLAYER_LOGIN")
 BASpammer:RegisterEvent("PLAYER_LOGOUT")
+BASpammer:RegisterEvent("RAID_ROSTER_UPDATE")
+BASpammer:RegisterEvent("PARTY_MEMBERS_CHANGED")
 
 SLASH_BASPAMMER1 = "/baspammer"
 SLASH_BASPAMMER2 = "/bas"
