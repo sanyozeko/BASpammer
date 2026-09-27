@@ -933,6 +933,39 @@ function BASpammerSettingStopButton_OnClick()
     BA_rosterCheckAt = nil
 end
 
+-- Разовая отправка текущего шаблона в чат гильдии. Спам при этом не трогаем:
+-- кнопка работает и на паузе, и во время спама, отсчёт не сбивается.
+local BA_lastGuildSend = 0
+
+function BASpammerSettingGuildButton_OnClick()
+    BA_ClearEditFocus()
+
+    local db = BASpammerAccountDB
+    local msg = db.Pattern and db.Pattern[db.CheckedPattern]
+    if BA_IsBlank(msg) then
+        BA_Print("|cffff0000Шаблон " .. tostring(db.CheckedPattern) .. " пуст, отправлять нечего.|r")
+        return
+    end
+    if not IsInGuild() then
+        BA_Print("|cffff0000Вы не состоите в гильдии.|r")
+        return
+    end
+
+    -- Защита от двойного клика: два одинаковых сообщения подряд в ги никому не нужны.
+    local now = GetTime()
+    if (now - BA_lastGuildSend) < 1 then return end
+    BA_lastGuildSend = now
+
+    SendChatMessage(BA_TrimToBytes(msg, BA_MAX_BYTES), "GUILD")
+end
+
+function BASpammerSettingGuildButton_OnEnter()
+    GameTooltip:SetOwner(BASpammerSettingGuildButton, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("Отправить в гильдию")
+    GameTooltip:AddLine("Один раз, текущий шаблон. На спам не влияет.", 1, 1, 1, true)
+    GameTooltip:Show()
+end
+
 function BASpammerSettingToggleButton_OnClick()
     BA_ClearEditFocus()
     if BASpammerAccountDB.Tumbler then

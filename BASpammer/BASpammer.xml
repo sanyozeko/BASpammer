@@ -166,7 +166,7 @@
 	</Button>
 	<Frame name="BASpammerSetting" toplevel="true" enableMouse="true" movable="true" parent="UIParent" hidden="true" inherits="BASpammerSettingBackgroundTemplate">
 		<Size>
-			<AbsDimension x="430" y="264"/>
+			<AbsDimension x="430" y="226"/>
 		</Size>
 		<Anchors>
  			<Anchor point="CENTER">
@@ -209,18 +209,6 @@
 						<Anchor point="TOPLEFT" relativeTo="BASpammerSetting" relativePoint="TOPLEFT">
 							<Offset>
 								<AbsDimension x="225" y="-34"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</FontString>
-				<FontString name="BASpammerSettingTitleText31" inherits="GameFontNormal" text="Текст" justifyH="LEFT">
-					<Size>
-						<AbsDimension x="100" y="16"/>
-					</Size>
-					<Anchors>
-						<Anchor point="TOPLEFT" relativeTo="BASpammerSetting" relativePoint="TOPLEFT">
-							<Offset>
-								<AbsDimension x="15" y="-84"/>
 							</Offset>
 						</Anchor>
 					</Anchors>
@@ -340,6 +328,39 @@
 					<OnClick>
 						BASpammerSettingToggleButton_OnClick()
 					</OnClick>
+				</Scripts>
+				<PushedTextOffset>
+					<AbsDimension x="1" y="-1"/>
+				</PushedTextOffset>
+				<ButtonText name="$parentText"/>
+				<NormalFont style="GameFontNormal"/>
+				<HighlightFont style="GameFontHighlight"/>
+				<DisabledFont style="GameFontDisable"/>
+				<NormalTexture name="$parentNormalTexture" file="Interface\AddOns\BASpammer\Textures\btn-up"/>
+				<PushedTexture name="$parentPushedTexture" file="Interface\AddOns\BASpammer\Textures\btn-down"/>
+				<HighlightTexture name="$parentHighlightTexture" file="Interface\AddOns\BASpammer\Textures\hl-wide" alphaMode="ADD"/>
+			</Button>
+			<Button name="BASpammerSettingGuildButton" text="|cff40ff40Отправить в ГИ|r">
+				<Size>
+					<AbsDimension x="130" y="22"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT" relativeTo="BASpammerSetting" relativePoint="TOPLEFT">
+						<Offset>
+							<AbsDimension x="15" y="-81"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						BASpammerSettingGuildButton_OnClick()
+					</OnClick>
+					<OnEnter>
+						BASpammerSettingGuildButton_OnEnter()
+					</OnEnter>
+					<OnLeave>
+						GameTooltip:Hide()
+					</OnLeave>
 				</Scripts>
 				<PushedTextOffset>
 					<AbsDimension x="1" y="-1"/>
@@ -548,12 +569,12 @@
 			</Frame>
 			<Frame name="BASpammerSettingText" inherits="BASpammerSettingBackgroundTemplate">
 				<Size>
-					<AbsDimension x="400" y="100"/>
+					<AbsDimension x="400" y="58"/>
 				</Size>
 				<Anchors>
-					<Anchor point="TOPLEFT" relativeTo="BASpammerSettingTitleText31" relativePoint="BOTTOMLEFT">
+					<Anchor point="TOPLEFT" relativeTo="BASpammerSettingGuildButton" relativePoint="BOTTOMLEFT">
 						<Offset>
-							<AbsDimension x="0" y="-6"/>
+							<AbsDimension x="0" y="-3"/>
 						</Offset>
 					</Anchor>
 				</Anchors>
@@ -573,49 +594,49 @@
 					</Layer>
 				</Layers>
 				<Frames>
-					<EditBox name="BASpammerSettingTextBox" letters="255" multiLine="true" autoFocus="false">
+					<ScrollFrame name="BASpammerSettingTextScroll">
+						<Size>
+							<AbsDimension x="388" y="46"/>
+						</Size>
 						<Anchors>
 							<Anchor point="TOPLEFT">
 								<Offset>
 									<AbsDimension x="6" y="-6"/>
 								</Offset>
 							</Anchor>
-							<Anchor point="BOTTOM">
-								<Offset>
-									<AbsDimension x="0" y="6"/>
-								</Offset>
-							</Anchor>
-							<Anchor point="RIGHT">
-								<Offset>
-									<AbsDimension x="-6" y="0"/>
-								</Offset>
-							</Anchor>
 						</Anchors>
-						<FontString inherits="ChatFontNormal"/>
-						<Scripts>
-							<OnMouseDown>
-								BASpammerSettingTextBox_OnMouseDown(self,arg1)
-							</OnMouseDown>
-							<OnTextChanged>
-								BASpammerSettingTextBox_OnTextChanged()
-							</OnTextChanged>
-							<OnEnterPressed>
-								BASpammerSettingTextBox_OnEnterPressed()
-							</OnEnterPressed>
-							<OnTabPressed>
-								BASpammerSettingTextBox_OnTabPressed()
-							</OnTabPressed>
-							<OnEscapePressed>
-								BASpammerSettingTextBox_OnEscapePressed()
-							</OnEscapePressed>
-							<OnEditFocusGained>
-								BASpammerSettingTextBox_OnEditFocusGained()
-							</OnEditFocusGained>
-							<OnEditFocusLost>
-								BASpammerSettingTextBox_OnEditFocusLost()
-							</OnEditFocusLost>
-						</Scripts>
-					</EditBox>
+						<ScrollChild>
+						<EditBox name="BASpammerSettingTextBox" letters="255" multiLine="true" autoFocus="false">
+							<Size>
+								<AbsDimension x="388" y="46"/>
+							</Size>
+							<FontString inherits="ChatFontNormal"/>
+							<Scripts>
+								<OnMouseDown>
+									BASpammerSettingTextBox_OnMouseDown(self,arg1)
+								</OnMouseDown>
+								<OnTextChanged>
+									BASpammerSettingTextBox_OnTextChanged()
+								</OnTextChanged>
+								<OnEnterPressed>
+									BASpammerSettingTextBox_OnEnterPressed()
+								</OnEnterPressed>
+								<OnTabPressed>
+									BASpammerSettingTextBox_OnTabPressed()
+								</OnTabPressed>
+								<OnEscapePressed>
+									BASpammerSettingTextBox_OnEscapePressed()
+								</OnEscapePressed>
+								<OnEditFocusGained>
+									BASpammerSettingTextBox_OnEditFocusGained()
+								</OnEditFocusGained>
+								<OnEditFocusLost>
+									BASpammerSettingTextBox_OnEditFocusLost()
+								</OnEditFocusLost>
+							</Scripts>
+						</EditBox>
+						</ScrollChild>
+					</ScrollFrame>
 					<Button name="BASpammerSettingTextCover">
 						<Anchors>
 							<Anchor point="TOPLEFT">
@@ -632,15 +653,8 @@
 						<Layers>
 							<Layer level="BACKGROUND">
 								<Texture name="$parentBg" setAllPoints="true">
-									<Color r="0" g="0" b="0" a="0.45"/>
+									<Color r="0" g="0" b="0" a="0.4"/>
 								</Texture>
-							</Layer>
-							<Layer level="OVERLAY">
-								<FontString name="$parentText" inherits="GameFontNormalSmall" text="Нажмите, чтобы изменить текст">
-									<Anchors>
-										<Anchor point="CENTER"/>
-									</Anchors>
-								</FontString>
 							</Layer>
 						</Layers>
 						<Scripts>
